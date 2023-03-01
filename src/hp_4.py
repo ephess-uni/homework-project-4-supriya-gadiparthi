@@ -8,10 +8,10 @@ from collections import defaultdict
 def reformat_dates(old_dates):
     """Accepts a list of date strings in format yyyy-mm-dd, re-formats each
     element to a format dd mmm yyyy--01 Jan 2001."""
-    new_list=[]
-    for d in old_dates:
-        new_list.append(datetime.strptime(d, "%Y-%m-%d").strftime("%d %b %Y"))
-    return new_list
+    modified_date_list=[]
+    for dat in old_dates:
+        modified_date_list.append(datetime.strptime(dat, "%Y-%m-%d").strftime("%d %b %Y"))
+    return modified_date_list
 
 def date_range(start, n):
     """For input date string `start`, with format 'yyyy-mm-dd', returns
@@ -23,68 +23,63 @@ def date_range(start, n):
     elif not isinstance(n, int):
         raise TypeError
     else:
-        lis=[]
-        for i in range(0,n):
-            lis.append(datetime.strptime(start,"%Y-%m-%d")  + timedelta(days=i))
-        return lis
+        added_list=[]
+        for inc in range(0,n):
+            added_list.append(datetime.strptime(start,"%Y-%m-%d")  + timedelta(days=inc))
+        return added_list
 
 
 def add_date_range(values, start_date):
     """Adds a daily date range to the list `values` beginning with 
     `start_date`.  The date, value pairs are returned as tuples
     in the returned list."""
-    lis=[]
-    z=0
-    for i in values:
-        telp_list=[]       
-        telp_list.append(datetime.strptime(start_date,"%Y-%m-%d")  + timedelta(days=z))
-        telp_list.append(i)
-        lis.append(tuple(telp_list))
-        z+=1
-    return lis
+    added_list=[]
+    for i, elem in enumerate(values):
+        dat_list=[]       
+        dat_list.append(datetime.strptime(start_date,"%Y-%m-%d")  + timedelta(days=i))
+        dat_list.append(elem)
+        added_list.append(tuple(dat_list))
+    return added_list
 
 
 def fees_report(infile, outfile):
     """Calculates late fees per patron id and writes a summary report to
     outfile."""
   
-    with open(infile) as f:
-        li=[]
-        DictReader_obj = DictReader(f)
-        for item in DictReader_obj:
-            di={}
-            day1=datetime.strptime(item['date_returned'],'%m/%d/%Y')- datetime.strptime(item['date_due'],'%m/%d/%Y') 
-            if(day1.days>0):
-                di["patron_id"]=item['patron_id']
-                di["late_fees"]=round(day1.days*0.25, 2)
-                li.append(di)
+    with open(infile) as file:
+        added_list=[]
+        read_csv_obj = DictReader(file)
+        for record in read_csv_obj:
+            temp_dict={}
+            late_fee_days=datetime.strptime(record['date_returned'],'%m/%d/%Y')- datetime.strptime(record['date_due'],'%m/%d/%Y') 
+            if(late_fee_days.days>0):
+                temp_dict["patron_id"]=record['patron_id']
+                temp_dict["late_fees"]=round(late_fee_days.days*0.25, 2)
+                added_list.append(temp_dict)
             else:
-                di["patron_id"]=item['patron_id']
-                di["late_fees"]=float(0)
-                li.append(di)
-        aggregated_data = {}
-
-        for dictionary in li:
-            key = (dictionary['patron_id'])
-
-            aggregated_data[key] = aggregated_data.get(key, 0) + dictionary['late_fees']
-
-        tax = [{'patron_id': key, 'late_fees': value} for key, value in aggregated_data.items()]
-        for dict in tax:
-            for k,v in dict.items():
-                if k == "late_fees":
-                    if len(str(v).split('.')[-1]) != 2:
-                        dict[k] = str(v)+'0'
-
-
-    
+                temp_dict["patron_id"]=record['patron_id']
+                temp_dict["late_fees"]=float(0)
+                added_list.append(temp_dict)
+                
+        temp_dict_2 = {}
+        for dict in added_list:
+            key = (dict['patron_id'])
+            temp_dict_2[key] = temp_dict_2.get(key, 0) + dict['late_fees']
+        updated_list = [{'patron_id': key, 'late_fees': value} for key, value in temp_dict_2.items()]
+        
+        for dict in updated_list:
+            for key,value in dict.items():
+                if key == "late_fees":
+                    if len(str(value).split('.')[-1]) != 2:
+                        dict[key] = str(value)+"0"
 
 
+   
     with open(outfile,"w", newline="") as file:
         col = ['patron_id', 'late_fees']
         writer = DictWriter(file, fieldnames=col)
         writer.writeheader()
-        writer.writerows(tax)
+        writer.writerows(updated_list)
 
 
 # The following main selection block will only run when you choose
